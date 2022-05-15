@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <script type="text/javascript" src="https://api.map.baidu.com/api?type=webgl&v=1.0&ak=PHl86ZXOyjrCQgvinN5Qoa7KyT8PCGit"></script>
+	<script src="https://code.bdstatic.com/npm/jquery@1.12.4/dist/jquery.min.js"></script>
+    <title>公交/地铁线路查询</title>
+    <style>
+        body, html{
+            width: 100%;
+            height: 100%;
+            margin:0;
+            font-family:"微软雅黑";
+        }
+        #l-map{
+            height:100%;
+            width:100%;
+		}
+		#r-result {
+            position: fixed;
+            left: 50%;
+            top: 0%;
+            z-index: 99;
+            width: 0%;
+            height: 0%;
+            overflow-y: auto;
+            background: #fff;
+            box-shadow: 0 2px 6px 0 rgba(27, 142, 236, 0.5);
+            border-radius: 7px;
+            font-size:x-small; 
+        }
+        #q-query
+        {
+            position: fixed;
+            left:0%;
+            top: 0%;
+            z-index: 99;
+            width: 40%;
+            height: 21%;
+            background: #fff;
+            box-shadow: 0 2px 6px 0 rgba(27, 142, 236, 0.5);
+            border-radius: 7px;
+            font-size:x-small; 
+        }
+        #btnsarea
+        {
+            width: 100%;
+            height: 25%;
+        }
+        #search{
+        width: 85%;
+        background: #5679ea;
+        border: 0;
+        padding-left: 0.5rem;
+        margin: 0.625rem 0.5rem 0 0;
+        cursor: pointer;
+        border-radius: 0.125rem;
+        color: #fff;
+        font-size:x-small; 
+        }
+        #busnumberinput{
+        width: 75%;
+        padding-left: 0.5rem;
+        margin: 1rem 0.5rem 0 0; 
+        font-size:x-small; 
+        }
+        #positioninput_3{
+            width: 75%;
+            padding-left: 0.5rem;
+            margin: 1rem 0.5rem 0 0; 
+            font-size:x-small; 
+        }
+        #change-btn{
+            width: 60%;
+            background: #5679ea;
+            border: 0;
+            padding-left: 0.5rem;
+            margin: 0.625rem 0.5rem 0 0;
+            cursor: pointer;
+            border-radius: 0.125rem;
+            color: #fff;
+            font-size:x-small; 
+        }
+        #location_cur{
+        background: #f00e59;
+        border: 0;
+        padding-left: 0.5rem;
+        margin: 0.625rem 0.5rem 0 0;
+        cursor: pointer;
+        border-radius: 0.125rem;
+        color: #fff;
+        font-size:x-small; 
+
+
+        }
+        #refrash{
+        background: #f00e59;
+        border: 0;
+        padding-left: 0.5rem;
+        margin: 0.625rem 0 0 0.625rem;
+        cursor: pointer;
+        border-radius: 0.125rem;
+        color: #fff;
+        font-size:x-small; 
+
+
+    }
+    </style>
+</head>
+<body>
+    <div id='l-map'></div>
+    <div id='r-result'>
+
+    </div>
+    <div id='q-query'>
+        <div id='btnsarea'>
+        <button id="change-btn"  onclick="SetCentrePoi()">设置定位城市</button>
+        <button id='location_cur' onclick="location_cur()">定位</button>
+        </div>
+        <button id="refrash"  onclick="refrash()">刷新</button>
+        <input id="positioninput_3" type="text" value="绵阳市">
+        <button id='search' onclick="startSearch()">查询公交编号</button>
+        <input id="busnumberinput" type="number" value="1">    
+    </div>
+    <script>
+    var centerPoi=new window.BMapGL.Point(104.69288, 31.46708);
+    var map = new BMapGL.Map("l-map");         
+	map.centerAndZoom(centerPoi, 15);
+    map.enableScrollWheelZoom(true);     //开启鼠标滚轮缩放
+//定位
+    
+        var geoposition=new BMapGL.Geolocation();
+        geoposition.enableSDKLocation();
+        geoposition.getCurrentPosition(function(r){
+            if(this.getStatus() == BMAP_STATUS_SUCCESS) {
+                        centerPoi=r.point;
+                    }   
+
+        })
+        map.centerAndZoom(centerPoi, 15);
+        var busline = new BMapGL.BusLineSearch(map,{
+            renderOptions:{map:map,panel:"r-result"},
+            onGetBusListComplete: function(result){
+                if(result) {
+                    var fstLine = result.getBusListItem(0);//获取第一个公交列表显示到map上
+                    busline.getBusLine(fstLine);
+                }
+            }
+        });
+        function busSearch(){
+            var busName=Number(document.getElementById('busnumberinput').value);
+            if(busName!=="")
+            {
+                var gc= new BMapGL.Geocoder();
+                gc.getLocation(centerPoi,function(res){
+                    if(res)
+                    {
+                        busline.setLocation(res.addressComponents.city);
+                        busline.enableAutoViewport();
+                        busline.getBusList(busName);
+                    }
+                });
+            }
+        }
+        function SetCentrePoi() {
+            
+        var val=document.getElementById('positioninput_3').value;
+        if(val!==""&&!val.includes("已定位到")){
+            var gc= new BMapGL.Geocoder();
+            gc.getPoint(val,function(res){
+                if(res)
+                {
+                    centerPoi.lng=res.lng;
+                    centerPoi.lat=res.lat;
+
+                    document.getElementById('positioninput_3').value="";
+                    document.getElementById('positioninput_3').value=("已定位到"+val);
+                    map.centerAndZoom(centerPoi, 14);
+                }
+                else
+                {
+                    document.getElementById('positioninput_3').value="设置失败";
+
+                }
+
+            },val)
+
+        }
+
+        }
+        function location_cur()
+        { 
+        var geoposition=new BMapGL.Geolocation();
+        geoposition.enableSDKLocation();
+        geoposition.getCurrentPosition(function(r)
+        {
+            if(this.getStatus() == BMAP_STATUS_SUCCESS) 
+            {
+                    centerPoi=r.point;
+                    var gc= new BMapGL.Geocoder();
+                    gc.getLocation(centerPoi,function(res){
+                        if(res)
+                        {
+                        var val=res.addressComponents.city;
+                        document.getElementById('positioninput_3').value="";
+                        document.getElementById('positioninput_3').value=("已定位到"+val);
+                        }
+                    })
+            }
+            map.centerAndZoom(centerPoi, 14);
+        })
+        }
+    function startSearch(){
+        busSearch();
+        document.getElementById('r-result').style.width='50%';
+        document.getElementById('r-result').style.height='40%';
+    }
+    //刷新
+    function refrash(){
+        map.clearOverlays(); 
+        document.getElementById('r-result').style.width='0%';
+        document.getElementById('r-result').style.height='0%';
+        map.centerAndZoom(centerPoi, 14);
+    }
+    </script>
+
+</body>
+</html>
